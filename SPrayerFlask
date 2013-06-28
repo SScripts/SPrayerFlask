@@ -1,0 +1,172 @@
+import org.powerbot.core.event.listeners.PaintListener;
+import org.powerbot.core.script.ActiveScript;
+import org.powerbot.core.script.job.Task;
+import org.powerbot.game.api.Manifest;
+import org.powerbot.game.api.methods.Widgets;
+import org.powerbot.game.api.methods.input.Mouse;
+import org.powerbot.game.api.methods.interactive.NPCs;
+import org.powerbot.game.api.methods.tab.Inventory;
+import org.powerbot.game.api.methods.widget.Bank;
+import org.powerbot.game.api.util.Timer;
+import org.powerbot.game.api.wrappers.interactive.NPC;
+import org.powerbot.game.api.wrappers.widget.WidgetChild;
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.Font;
+import java.awt.*;
+import java.awt.Point;
+import java.util.LinkedList;
+
+
+@Manifest(name = "SPrayerFlask", description = "makes money from Prayer Flasks", authors = "SScripts")
+
+public class SPrayerFlask extends ActiveScript implements PaintListener{
+
+    private final int PRAYERPOT_ID = 139;
+    private final int FLASK_ID =  23191;
+    private final int PRAYERFLASK_ID = 23243;
+    private final int PRAYERFLASK5_ID = 23245;
+
+
+
+
+
+
+    Timer runTime = new Timer(0);
+    Font font1 = new Font("Verdana", 0, 16); //20 being the font size
+
+
+
+
+
+
+
+    @Override
+    public int loop() {
+        all();
+        making();
+
+
+        return 50;
+    }
+
+
+
+    public void onStart() {
+        Mouse.setSpeed(Mouse.Speed.VERY_FAST);
+    }
+
+
+    void all() {
+
+
+        NPC banker = NPCs.getNearest(Bank.BANK_NPC_IDS);
+
+        if(!Bank.isOpen() && Inventory.getCount(PRAYERFLASK_ID) == 9 ) {
+
+            Bank.open();
+            Task.sleep(70, 100);
+            Bank.depositInventory();
+            Task.sleep(100, 150);
+
+        }
+        if (Bank.isOpen() && !Inventory.isFull()) {
+            Bank.withdraw(PRAYERPOT_ID, 19);
+            Bank.withdraw(FLASK_ID, Bank.Amount.ALL);
+            if(Bank.isOpen() && Inventory.isFull()) {
+                Bank.close();
+                Task.sleep(50,70);
+            }
+
+        }
+
+
+        if (Inventory.contains(PRAYERFLASK5_ID) && Inventory.getCount(PRAYERFLASK_ID) == 8){
+            Bank.open();
+            Task.sleep(100, 200);
+            Bank.depositInventory();
+            Task.sleep(100, 150);
+
+
+
+        }
+
+        if (!Bank.isOpen() && !Inventory.isFull()){
+            Bank.open();
+            Task.sleep(100,200);
+        }
+
+        if (Bank.isOpen() && Inventory.getCount(PRAYERPOT_ID) == 19 && Inventory.getCount(FLASK_ID) == 9 ){
+            Bank.close();
+            Task.sleep(100,200);
+        }
+
+
+    }
+
+    void making() {
+
+        final WidgetChild thetreebutton = Widgets.get(1188, 28);
+
+        if (Inventory.contains(PRAYERPOT_ID) && Inventory.contains(FLASK_ID)) {
+                Inventory.selectItem(FLASK_ID);
+                Inventory.getItem(PRAYERPOT_ID).getWidgetChild().click(true);
+                sleep(50,70);
+                thetreebutton.click(true);
+                Task.sleep(2000,5050);
+            }
+
+        }
+
+
+    private final LinkedList<MousePathPoint> mousePath = new LinkedList<MousePathPoint>();
+
+    @SuppressWarnings("serial")
+    private class MousePathPoint extends Point { // All credits to Enfilade
+
+        private long finishTime;
+        private double lastingTime;
+
+        public MousePathPoint(int x, int y, int lastingTime) {
+            super(x, y);
+            this.lastingTime = lastingTime;
+            finishTime = System.currentTimeMillis() + lastingTime;
+        }
+
+        public boolean isUp() {
+            return System.currentTimeMillis() > finishTime;
+        }
+    }
+
+
+    @Override
+    public void onRepaint(Graphics g1) {
+        Graphics2D g = (Graphics2D)g1;
+        g.setColor(Color.CYAN);
+        g.setFont(font1);
+        g.drawString(runTime.toElapsedString(), 10, 100);
+
+        g.setColor(Color.CYAN);
+        g.drawLine(Mouse.getX() - 5, Mouse.getY() - 5, Mouse.getX() + 5, Mouse.getY() + 5);
+        g.drawLine(Mouse.getX() - 5, Mouse.getY() + 5, Mouse.getX() + 5, Mouse.getY() - 5);
+
+        while (!mousePath.isEmpty() && mousePath.peek().isUp())
+            mousePath.remove();
+        Point clientCursor = Mouse.getLocation();
+        MousePathPoint mpp = new MousePathPoint(clientCursor.x, clientCursor.y,
+                300); //1000 = lasting time/MS
+        if (mousePath.isEmpty() || !mousePath.getLast().equals(mpp))
+            mousePath.add(mpp);
+        MousePathPoint lastPoint = null;
+        for (MousePathPoint a : mousePath) {
+            if (lastPoint != null) {
+                g.setColor(Color.RED);
+                g.drawLine(a.x, a.y, lastPoint.x, lastPoint.y);
+            }
+            lastPoint = a;
+        }
+
+
+    }
+}
+
